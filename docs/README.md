@@ -24,7 +24,17 @@
 
 
 
-## 1.28.0
+### 1.28.2
+
+- [New] Support Assembly Strong Name Signature #450
+- [New] Support QueryRange (via @1ras1)
+
+### 1.28.1
+
+- [Optimization] Reduce string memory allocation when template save #439 (via @cupsos)
+- [Optimization] Remove dependency System.Memory #441 (via @ping9719)
+
+### 1.28.0
 
 - [New] Support CSV Insert #I4X92G (via @shps951023)
 

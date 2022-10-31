@@ -47,7 +47,7 @@
             ExcelWriterFactory.GetProvider(stream, v, sheetName, excelType, configuration, false).Insert();
         }
 
-        public static void SaveAs(string path, object value, bool printHeader = true, string sheetName = "Sheet1", ExcelType excelType = ExcelType.UNKNOWN, IConfiguration configuration = null,bool overwriteFile = false)
+        public static void SaveAs(string path, object value, bool printHeader = true, string sheetName = "Sheet1", ExcelType excelType = ExcelType.UNKNOWN, IConfiguration configuration = null, bool overwriteFile = false)
         {
             if (Path.GetExtension(path).ToLowerInvariant() == ".xlsm")
                 throw new NotSupportedException("MiniExcel SaveAs not support xlsm");
@@ -76,14 +76,12 @@
                     yield return item;
                 }
         }
-
         public static IEnumerable<dynamic> Query(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
         {
             using (var stream = FileHelper.OpenSharedRead(path))
                 foreach (var item in Query(stream, useHeaderRow, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), startCell, configuration))
                     yield return item;
         }
-
         public static IEnumerable<dynamic> Query(this Stream stream, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
         {
             using (var excelReader = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration))
@@ -92,10 +90,29 @@
                             (dict, p) => { dict.Add(p); return dict; });
         }
 
+        #region range
+
+        public static IEnumerable<dynamic> QueryRange(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "a1", string endCell = "", IConfiguration configuration = null)
+        {
+            using (var stream = FileHelper.OpenSharedRead(path))
+                foreach (var item in QueryRange(stream, useHeaderRow, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), startCell == "" ? "a1" : startCell, endCell, configuration))
+                    yield return item;
+        }
+
+        public static IEnumerable<dynamic> QueryRange(this Stream stream, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "a1", string endCell = "", IConfiguration configuration = null)
+        {
+            using (var excelReader = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration))
+                foreach (var item in excelReader.QueryRange(useHeaderRow, sheetName, startCell == "" ? "a1" : startCell, endCell))
+                    yield return item.Aggregate(new ExpandoObject() as IDictionary<string, object>,
+                            (dict, p) => { dict.Add(p); return dict; });
+        }
+
+        #endregion range
+
         public static void SaveAsByTemplate(string path, string templatePath, object value, IConfiguration configuration = null)
         {
             using (var stream = File.Create(path))
-                SaveAsByTemplate(stream, templatePath, value,configuration);
+                SaveAsByTemplate(stream, templatePath, value, configuration);
         }
 
         public static void SaveAsByTemplate(string path, byte[] templateBytes, object value, IConfiguration configuration = null)
@@ -122,9 +139,10 @@
         {
             using (var stream = FileHelper.OpenSharedRead(path))
             {
-                return QueryAsDataTable(stream, useHeaderRow, sheetName, excelType:ExcelTypeHelper.GetExcelType(path, excelType), startCell, configuration);
+                return QueryAsDataTable(stream, useHeaderRow, sheetName, excelType: ExcelTypeHelper.GetExcelType(path, excelType), startCell, configuration);
             }
         }
+
         public static DataTable QueryAsDataTable(this Stream stream, bool useHeaderRow = true, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
         {
             if (sheetName == null && excelType != ExcelType.CSV) /*Issue #279*/
@@ -132,7 +150,7 @@
 
             var dt = new DataTable(sheetName);
             var first = true;
-            var rows = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType),configuration).Query(useHeaderRow, sheetName, startCell);
+            var rows = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration).Query(useHeaderRow, sheetName, startCell);
 
             var keys = new List<string>();
             foreach (IDictionary<string, object> row in rows)
@@ -175,7 +193,7 @@
         public static List<string> GetSheetNames(this Stream stream)
         {
             var archive = new ExcelOpenXmlZip(stream);
-            return new ExcelOpenXmlSheetReader(stream,null).GetWorkbookRels(archive.entries).Select(s => s.Name).ToList();
+            return new ExcelOpenXmlSheetReader(stream, null).GetWorkbookRels(archive.entries).Select(s => s.Name).ToList();
         }
 
         public static ICollection<string> GetColumns(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
