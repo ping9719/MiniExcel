@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>MiniExcelLib.Csv</RootNamespace>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <Title>MiniExcel.Csv</Title>
+        <PackageId>MiniExcel.Csv</PackageId>
+    </PropertyGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\MiniExcel.Core\MiniExcel.Core.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,18 @@
+﻿namespace MiniExcelLib.Core.Attributes;
+
+public class MiniExcelColumnIndexAttribute : MiniExcelAttributeBase
+{
+    public int ExcelColumnIndex { get; set; }
+    internal string? ExcelXName { get; set; }
+    public MiniExcelColumnIndexAttribute(string columnName) => Init(CellReferenceConverter.GetNumericalIndex(columnName), columnName);
+    public MiniExcelColumnIndexAttribute(int columnIndex) => Init(columnIndex);
+
+    private void Init(int columnIndex, string? columnName = null)
+    {
+        if (columnIndex < 0)
+            throw new ArgumentOutOfRangeException(nameof(columnIndex), columnIndex, $"Column index {columnIndex} must be greater or equal to zero.");
+        
+        ExcelXName ??= columnName ?? CellReferenceConverter.GetAlphabeticalIndex(columnIndex);
+        ExcelColumnIndex = columnIndex;
+    }
+}

@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>MiniExcelLib.Core</RootNamespace>
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<Title>MiniExcel.Core</Title>
+		<PackageId>MiniExcel.Core</PackageId>
+	</PropertyGroup>
+
+</Project>

@@ -1,10 +1,9 @@
 name: .NET
 
 on:
-  push:
-    branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
+  push:
+    branches: [master, v1.x-maintenance]
 
 jobs:
   build:
@@ -12,14 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: | 
+          8.0.x
+          10.0.x
     - name: Restore dependencies
       run: dotnet restore
+      env:
+          VSTEST_CONNECTION_TIMEOUT: 9000
     - name: Build
       run: dotnet build --no-restore
+      env:
+          VSTEST_CONNECTION_TIMEOUT: 9000
     - name: Test
       run: dotnet test --no-build --verbosity normal
+      env:
+          VSTEST_CONNECTION_TIMEOUT: 9000

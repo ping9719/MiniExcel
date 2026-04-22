@@ -4,8 +4,8 @@
 
 <div align="center">
 <p><a href="https://www.nuget.org/packages/MiniExcel"><img src="https://img.shields.io/nuget/v/MiniExcel.svg" alt="NuGet"></a>  <a href="https://www.nuget.org/packages/MiniExcel"><img src="https://img.shields.io/nuget/dt/MiniExcel.svg" alt=""></a>  
-<a href="https://ci.appveyor.com/project/shps951023/miniexcel/branch/master"><img src="https://ci.appveyor.com/api/projects/status/b2vustrwsuqx45f4/branch/master?svg=true" alt="Build status"></a>
-<a href="https://gitee.com/dotnetchina/MiniExcel"><img src="https://gitee.com/dotnetchina/MiniExcel/badge/star.svg" alt="star"></a> <a href="https://github.com/shps951023/MiniExcel" rel="nofollow"><img src="https://img.shields.io/github/stars/shps951023/MiniExcel?logo=github" alt="GitHub stars"></a> 
+<a href="https://ci.appveyor.com/project/mini-software/miniexcel/branch/master"><img src="https://ci.appveyor.com/api/projects/status/b2vustrwsuqx45f4/branch/master?svg=true" alt="Build status"></a>
+<a href="https://gitee.com/dotnetchina/MiniExcel"><img src="https://gitee.com/dotnetchina/MiniExcel/badge/star.svg" alt="star"></a> <a href="https://github.com/mini-software/MiniExcel" rel="nofollow"><img src="https://img.shields.io/github/stars/mini-software/MiniExcel?logo=github" alt="GitHub stars"></a> 
 <a href="https://www.nuget.org/packages/MiniExcel"><img src="https://img.shields.io/badge/.NET-%3E%3D%204.5-red.svg" alt="version"></a>
 </p>
 </div>
@@ -19,12 +19,184 @@
 ---
 
 <div align="center">
-<p> 您的 <a href="https://github.com/shps951023/miniexcel">Star</a> 和 <a href="https://miniexcel.github.io">贊助</a> 能幫助 MiniExcel 成長 </p>
+<p> 您的 <a href="https://github.com/mini-software/miniexcel">Star</a> 和 <a href="https://miniexcel.github.io">贊助</a> 能幫助 MiniExcel 成長 </p>
 </div>
 
 ---
 
 
+
+### 1.41.3
+
+* 【新增】在 CsvConfiguration 中新增 `QuoteWhitespaces` 選項，讓包含空白字元的字串自動加上雙引號 #790（由 @michelebastione 提供）
+* 【修正】修正當使用 IDataReader 作為資料來源時，DynamicExcelColumn 的 `Ignore` 屬性無效的問題 #584（由 @michelebastione 提供）
+* 【修正】v1.41.2 中 `AddPicture` 功能無法使用的問題 #814（由 @shps951023 提供）
+* 【修正】v1.41.1 中 `AddPicture` 插入的圖片最大列與欄僅為兩格儲存格的問題 #815（由 @shps951023 提供）
+* 【修正】當再次使用相同匯出檔案時，`AddPicture` 發生錯誤的問題 #817（由 @shps951023 提供）
+
+
+### 1.41.2
+- [New] 增加 enum behaviour and adds support for DescriptionAttribute when saving by template (via @michelebastione )
+- [Bug] SaveAsByTemplate - Excel Dimension Xml is null #459 (via @michelebastione )
+- [Other] Benchmarks refactoring and adaptation for making them run on Github Actions (#777) (via @michelebastione )
+- [Other] 增加 deepwiki link and badge (via @isdaniel )
+
+### 1.41.1
+- [New] Added sheet dimensions feature (#774) (via @michelebastione)
+- [Bug] Fix Saving by template introduces unintended value replication in each row #771
+(via @shps951023)
+- [Bug] SaveAsByTemplate not working in > v1.39.0 for templates with columns past Z #773 (via @shps951023)
+- [Bug] Fix Excel style.xml duplicate numFmtId, system error: An item with the same key has already been added. #772 (via @shps951023)
+
+### 1.41.0
+
+- [New] 支持批量圖片新增 MiniExcel AddPicture #770 (via @shps951023)
+- [New] OpenXmlConfiguration中添加 是否寫入文件路徑的配置項 ，實現導入圖片時候對應單元格可以不填充文本. (via @dotnetfans)
+
+### 1.40.1
+- [New] Added support for DateOnly type in query mapping (via @michelebastione)
+- [New] Added StyleOptions class to OpenXmlConfiguration to allow more direct control over cell styles (#761) (via @michelebastione)
+- [Bug] Fix SaveAsByTemplate empty generated result
+
+### 1.40.0
+- [New] Added exception to warn for sheet name too long (via @michelebastione)
+- [New] Added options for trimming column names and ignoring empty rows (via @michelebastione)
+- [New] Added IAsyncDisposable calls to ExcelOpenXmlsheetWriter.Async (via @michelebastione)
+- [New] Add conditional formatting support to Excel template (#745) (via @Notallthatevil)
+- [New] Add support for .NET 9.0 in project file (#744) (via @Notallthatevil)
+- [Bug] Bugfix of invalid cell values being mistakenly parsed as valid (via @michelebastione)
+- [Bug] Changing NotImplementedException assert in some tests to NotSupportedException (via @michelebastione)
+- [Bug] Moved sheet name check and fixed datetime formatting bug (via @michelebastione)
+- [OPT] Optimize max memory usage of SaveAsByTemplate #750 (#752) (via @shps951023)
+- [OPT] Optimization of SaveAsTemplate method (#749) (via @michelebastione)
+- [OPT] Removing DateTimeHelper.FromOADate and related code (via @michelebastione)
+- [OPT] Remove redundant property in csproj file (#748) (via @AZhrZho)
+- [Breaking Change] QueryRange doesn't support column name without row number #763 (via @michelebastione)
+
+
+### 1.39.0
+- [New] Added support for Uri mapping (#726) (via @michelebastione)
+- [New] Added insert sheet feature about ContentTypesXml processing (#728) (via @izanhzh)
+- [New] Supports the TimeSpan type, double.NaN exports invalid values, and when reading, it needs to be determined whether it is a double value. (via @wxn401)
+- [Bug] Fixed parsing bug in the conversion to double (#734) (via @michelebastione)
+- [Bug] Fixed configuration is not used when writing using IDataReader #735 (via @michelebastione)
+- [Bug] Fixed cancellation token not working for some async methods, enhanced export methods by returning number of rows, added active tab functionality, tests and code cleanup (#738) (via @michelebastione)
+
+
+### 1.38.0
+- [New] feat(DynamicExcelColumn): make the CustomFormatter property more powerful (#715) (via @izanhzh)
+- [New] feat(ExcelNumberFormat): extend the SectionType (#716) (via @izanhzh)
+- [New] feat(ExcelOpenXmlSheetWriter): adjust the location of the CustomFormatter execution (#722) (via @izanhzh)
+- [New] WriteEmptyStringAsNull implementation (#725) (via @jiangyi1985)
+- [Bug] Fix @group tag not working with certain IEnumerable types (#723) (via @JamesDSource)
+- [OPT] Optimized ContainsKey calls to TryGetValue (via @michelebastione) 
+- [OPT] Changed Count() method calls to Count property (via @michelebastione) 
+- [OPT] Materialized some IEnumerables using ToList (via @michelebastione) 
+- [OPT] Added safe IDisposable cast to IEnumerator (via @michelebastione) 
+- [OPT] Removed superfluous indentation and parenthesis (via @michelebastione) 
+
+### 1.37.0
+- [New] feat: support insert sheet (#709) (via @izanhzh)
+- [Bug] fix(MiniExcelDataReader): GetOrdinal always returns 0 (#711) (via @izanhzh)
+- [OPT] Generalize excel writing with a common write adapter and implement writing IAsyncEnumerable (#712) (via @Discolai , @izanhzh)
+
+
+### 1.36.1
+- [New] feat(MiniExcelDataReaderBase): add asynchronous support (#706) (via @izanhzh , @ArgoZhang )
+
+### 1.36.0
+- [New] Write auto column width (#695) (via @Discolai)
+- [New] Enhance IDataReader export with DynamicColumnFirst and Custom Formatting Delegate (#700) (via @
+IcedMango)
+- [Bug] If cellValue is string no matter that it contains only numbers will put the value as text. Preventing of losing leading zeroes (via @psyhlo)
+
+
+### 1.35.0
+
+- [New] Formula attribute added to support in rows with dto or dynamic attributes (#679) (via @RaZer0k & Co-authored-by: Eulises Vargas )
+- [New] Async implementation of freezing top row (#684)  (via @BaatenHannes )
+- [New] Upgrade to .NET 8.0 and refactor input value extraction (#681) (via @ramioh )
+- [Bug] Yield empty self-closing row tags as empty row during query. (#673) (via @aulickiDnv )
+
+### 1.34.2
+
+- [New] Add MniExcelDataReaderBase class to simplify code (#651) (via @ArgoZhang )
+- [OPT] perf csv insert (#653) (via @izanhzh )
+- [Bug] Fix dimension writing in FastMode (#659) (via @Discolai )
+- [Bug] Fix QueryAsDataTable can't read Excel with only header rows (#647) (via @Discolai )
+
+### 1.34.1
+- [Bug] Fix Issue 632, refactor sheet styles (#640) (via @meld-cp)
+- [Bug] Fix StartSheetView for multiple selection (#641) (via @jiaguangli)
+
+### 1.34.0
+- [New] 支持 freeze panes (#626) (via @meld-cp)
+- [New] 支持 DateTime Nullale support (via @jiaguangli)
+- [OPT] Reduce memory requirements when processing templates + template formulas (#638) (via @meld-cp)
+- [Bug] 修正 problem with multi-line when using Query (#628) (via @meld-cp)
+- [Bug] 修正 empty data reader issue. (#629) (via @duszekmestre)
+- [Bug] 修正 Fields of type long cannot be set to text normally #627 (via @shps951023)
+
+### 1.33.0
+- [New] 支持 Template 公式 (#622) (via @meld-cp)
+- [New] 更新 DynamicConfiguration format (#595) (via @wangboshun)
+- [OPT] CSV enumeration and code reusage (#600) (via @duszekmestre)
+- [OPT] 1900 year DateTime correction #599 (via @duszekmestre)
+
+### 1.32.1
+- [New] .NET5^ support image `ReadOnlySpan<byte>` (via @shps951023)
+- [Bug] Remove bug with Portable.System.DateTimeOnly and only support DateOnly .NET6^ #594 (via @shps951023)
+
+### 1.32.0
+- [New] Using DynamicConfiguration when writing data using DataTable (via @pszybiak)
+- [New] Make System.DateOnly available as date in Excel (#576) (via @ofthelit)
+- [New] Allow ampersand in sheet names (via @ofthelit)
+- [OPT] Use true async processing for excel writer (#573) (via @duszekmestre)
+- [Bug] Fix nullable enumeration conversion failure #567) (via @PurplestViper)
+- [Bug] IEnumerable traversed twice #422 (via @Discolai)
+- [Bug] Fix Read empty string as null (via @pszybiak)
+- [Bug] Fix CSV Reader Query faild on specific xlsx file, throws ExcelColumnNotFoundException (via @AZhrZho)
+- [Bug] Fix DynamicExcelColumn configuration while saving IDictionary values (via @johannes-barta)
+- [Bug] Fix propInfo.Key missing (via @shps951023)
+- [Bug] Fix sharedStrings ref #549 (via @shps951023)
+
+### 1.31.3
+- [Bug] DescriptionAttr null check(via @wulaoh)
+- [Bug] Throw custom exception when CSV column not found #543 (via @pszybiak)
+- [Bug] SaveAsByTemplate rowInfo.IEnumerableMercell.Height null exception #553 (via @shps951023)
+
+### 1.31.2
+
+- [New] 支持automatic merge for same vertical cells between @merge and @endmerge tags (via @eynarhaji)
+- [New] 限制 merge tagged columns with @mergelimit column. First merge limited column and then merge other columns accordingly. (via @eynarhaji)
+- [New] 支持 dynamic columns when generating sheet by IDataReader to change columns names & widths #514 (via @Laxynium)
+- [Bug] Fix R1C1 reference to A1 reference bug (via @ivan132)
+
+
+### 1.31.1
+
+- [OPT] 支持 property cache #23 (via @RRQM_Home)
+
+### 1.31.0
+- [New] 支持 Fields #490 (via @jsgervais)
+- [New] 支持是否寫入 null values cell #497 (via @0MG-DEN)
+- [Bug] 修復calc chain.xml 問題  #491(via @ArgoZhang)
+- [Bug] 修復特定文件 `/xl` 定位錯誤  #494 (via @ArgoZhang)
+
+### 1.30.3
+- [New] 模版支持 if/else 單元格語句 (via @eynarhaji)
+
+### 1.30.2
+- [New] 支持 grouped rows (via @eynarhaji)
+- [New] 支持 automatic merge vertical cells (via @eynarhaji)
+
+### 1.30.1
+- [New] 支持 function 自定義 separator (via @hyzx86)
+- [New] 支持 config for get sheet names (via @H4ad)
+
+### 1.30.0
+- [New] 移除不支持的 .NET 5.0 支持
+- [New] 支持 excel enum description string to enum #289 (via @KaneLeung)
 
 ### 1.29.0
 
@@ -248,26 +420,26 @@
 - [Breaking Change] 更換 OpenXmlConfiguration FillMergedCells 名稱
 
 ### 0.14.4
-- [New] Query 支持向下填充合併的單元格 [#122](https://github.com/shps951023/MiniExcel/issues/122)
+- [New] Query 支持向下填充合併的單元格 [#122](https://github.com/mini-software/MiniExcel/issues/122)
 - [Bug] 修正 QueryAsDataTable 錯誤 "Cannot set Column to be null" #229
 
 ### 0.14.3
 - [Opt] 支持 Xlsm 自動判斷 #227
-- [Bug] 修正 SaveAsByTemplate 單列 demension 索引錯誤 [#226](https://github.com/shps951023/MiniExcel/issues/226)
+- [Bug] 修正 SaveAsByTemplate 單列 demension 索引錯誤 [#226](https://github.com/mini-software/MiniExcel/issues/226)
 
 ### 0.14.2
-- [Bug] 修正 asp.net webform gridview datasource 不能使用 QueryAsDataTable [#223](https://github.com/shps951023/MiniExcel/issues/223)
+- [Bug] 修正 asp.net webform gridview datasource 不能使用 QueryAsDataTable [#223](https://github.com/mini-software/MiniExcel/issues/223)
 
 ### 0.14.1
-- [Bug] 修正自定義 m/d 格式沒轉成 datetime [#222](https://github.com/shps951023/MiniExcel/issues/222)
+- [Bug] 修正自定義 m/d 格式沒轉成 datetime [#222](https://github.com/mini-software/MiniExcel/issues/222)
 
 ### 0.14.0
-- [New] Query、GetColumns 支持 startCell 能指定 cell 開始讀取資料 [#147](https://github.com/shps951023/MiniExcel/issues/147)
+- [New] Query、GetColumns 支持 startCell 能指定 cell 開始讀取資料 [#147](https://github.com/mini-software/MiniExcel/issues/147)
 - [New] GetColumns 支持讀取表頭
 
 ### 0.13.5
-- [New] 新增 QueryAsDataTable 方法 [#216](https://github.com/shps951023/MiniExcel/issues/216)
-- [New] SaveAs 支持 IDataReader value 參數 [#211](https://github.com/shps951023/MiniExcel/issues/211)
+- [New] 新增 QueryAsDataTable 方法 [#216](https://github.com/mini-software/MiniExcel/issues/216)
+- [New] SaveAs 支持 IDataReader value 參數 [#211](https://github.com/mini-software/MiniExcel/issues/211)
 - [Bug] 修正數字格式的字串會被強制轉換為decimal類型 [#I3OSKV](https://gitee.com/dotnetchina/MiniExcel/issues/I3OSKV)
 - [Opt] 優化 SaveAs 類別轉換算法，避免效率浪費
 
@@ -277,18 +449,18 @@
 - [OPT] 優化 stream excel 類別(xlsx or csv)檢查 #215
 
 ### 0.13.3
-- [New] 支持 Excel 單純讀取模式，避免同時改模版又運行 MiniExcel 出現錯誤 "The process cannot access the file because it is being used by another process" [#87](https://github.com/shps951023/MiniExcel/issues/87)
+- [New] 支持 Excel 單純讀取模式，避免同時改模版又運行 MiniExcel 出現錯誤 "The process cannot access the file because it is being used by another process" [#87](https://github.com/mini-software/MiniExcel/issues/87)
 - [Breaking Change] CSV SaveAs datetime 預設格式改為 "yyyy-MM-dd HH:mm:ss"
-- [Bug] 修正模版模式集合渲染遇到合併列會出現異常問題 [#207](https://github.com/shps951023/MiniExcel/issues/207)
+- [Bug] 修正模版模式集合渲染遇到合併列會出現異常問題 [#207](https://github.com/mini-software/MiniExcel/issues/207)
 - [Bug] 修正 MiniExcel.SaveAs(path, value,sheetName:"Name"), 實際 sheetName 是 Sheet1
 
 ### 0.13.2
-- [Bug] 超過 255 列無法讀取錯誤 [#208](https://github.com/shps951023/MiniExcel/issues/208)
+- [Bug] 超過 255 列無法讀取錯誤 [#208](https://github.com/mini-software/MiniExcel/issues/208)
 
 ### 0.13.1
-- [New] SaveAsByTemplate 支持讀取模板 byte[],方便緩存跟支持多用戶同時讀取同一個模板 [#189](https://github.com/shps951023/MiniExcel/issues/189)
-- [New] SaveAsByTemplate 支持傳入 `IEnmerable<IDicionary<string,object>> 或 DapperRows 或 DataTable` 參數 [#201](https://github.com/shps951023/MiniExcel/issues/201)
-- [Bug] 修正使用 stream SaveAs/SaveAsByTemplate 系統會自動關閉流 stream [#200](https://github.com/shps951023/MiniExcel/issues/200)
+- [New] SaveAsByTemplate 支持讀取模板 byte[],方便緩存跟支持多用戶同時讀取同一個模板 [#189](https://github.com/mini-software/MiniExcel/issues/189)
+- [New] SaveAsByTemplate 支持傳入 `IEnmerable<IDicionary<string,object>> 或 DapperRows 或 DataTable` 參數 [#201](https://github.com/mini-software/MiniExcel/issues/201)
+- [Bug] 修正使用 stream SaveAs/SaveAsByTemplate 系統會自動關閉流 stream [#200](https://github.com/mini-software/MiniExcel/issues/200)
 
 ### 0.13.0
 - [New] 支持 .NET Framework 4.5 以上版本
@@ -310,7 +482,7 @@
 - [New] 支持`填充Excel`模式 ，借由 SaveAsByTemplate 方法以模板填充資料，
 
 ### 0.11.1
-- [New] 支持 ColumnIndex Attribute [#142](https://github.com/shps951023/MiniExcel/issues/142) & [#I3I3EB](https://gitee.com/dotnetchina/MiniExcel/issues/I3I3EB)
+- [New] 支持 ColumnIndex Attribute [#142](https://github.com/mini-software/MiniExcel/issues/142) & [#I3I3EB](https://gitee.com/dotnetchina/MiniExcel/issues/I3I3EB)
 - [Bug] 修正 issue #157 : 特別情況無法使用指定 sheet name 查詢
 - [Update] issue #150 : SaveAs 值集合錯誤訊息更明細
 
@@ -322,11 +494,11 @@
 - [Optimization] 優化 SaveAs/Query excel 檔案類型自動判斷
 
 ### 0.10.3(請勿使用) 
-- [Bug] 修正 Query SharedStrings 控制字符沒有 encoding (issue [Issue #149](https://github.com/shps951023/MiniExcel/issues/149))
+- [Bug] 修正 Query SharedStrings 控制字符沒有 encoding (issue [Issue #149](https://github.com/mini-software/MiniExcel/issues/149))
 
 ### 0.10.2
-- [Bug] 修正 SharedStrings get wrong index (issue [#153](https://github.com/shps951023/MiniExcel/issues/153))
-- [Bug] SaveAs 支持 control character encoding (issue [Issue #149](https://github.com/shps951023/MiniExcel/issues/149))
+- [Bug] 修正 SharedStrings get wrong index (issue [#153](https://github.com/mini-software/MiniExcel/issues/153))
+- [Bug] SaveAs 支持 control character encoding (issue [Issue #149](https://github.com/mini-software/MiniExcel/issues/149))
 
 ### 0.10.1(請勿使用) 
 - [New] SaveAs 支持 POCO excel 欄位名稱/忽略 attribute
@@ -376,11 +548,11 @@
 ### 0.2.2(請勿使用)
 - SavaAs 支持 xl/sheet dimension
 - [Breaking Changes] SaveAs value 類別準許 object & DataTable & ICollection
-- [Bug] 修正 ICollection with type 沒有資料錯誤 (https://github.com/shps951023/MiniExcel/issues/105)
+- [Bug] 修正 ICollection with type 沒有資料錯誤 (https://github.com/mini-software/MiniExcel/issues/105)
 
 ### 0.2.1(請勿使用)  
 - [Optimize] Optimize type mapping bool and datetime auto check
-- [New] Query 支持 xl/worksheets/Sheet Xml `<c>` 沒有 `r` 屬性或是沒有 `<dimension>` 但 `<c>` 有 `r` 屬性情況, 但是效率會遠低於有 dimension ([](https://github.com/shps951023/MiniExcel/issues/2))
+- [New] Query 支持 xl/worksheets/Sheet Xml `<c>` 沒有 `r` 屬性或是沒有 `<dimension>` 但 `<c>` 有 `r` 屬性情況, 但是效率會遠低於有 dimension ([](https://github.com/mini-software/MiniExcel/issues/2))
 
 ### 0.2.0(請勿使用)  
 - 發布至 nuget.org

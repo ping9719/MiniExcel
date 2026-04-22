@@ -1,23 +1,28 @@
-﻿using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Running;
-using MiniExcelLibs;
-using OfficeOpenXml;
+﻿using BenchmarkDotNet.Running;
+using MiniExcelLib.Benchmarks;
+using MiniExcelLib.Benchmarks.BenchmarkSections;
 
-namespace MiniExcelLibs.Benchmarks
+if (Environment.GetEnvironmentVariable("BenchmarkMode") == "Automatic")
 {
-    class Program
+    var section = Environment.GetEnvironmentVariable("BenchmarkSection");
+    var benchmark = section?.ToLowerInvariant().Trim() switch
     {
-        static void Main(string[] args)
-        {
-#if DEBUG
-            new XlsxBenchmark().Epplus_QueryFirst_Test();
-#else
-            BenchmarkSwitcher.FromTypes(new[]{typeof(XlsxBenchmark)}).Run(args, new Config());
-#endif
-            Console.Read();
-        }
-    }
+        "query" => typeof(QueryExcelBenchmark),
+        "create" => typeof(CreateExcelBenchmark),
+        "template" => typeof(TemplateExcelBenchmark),
+        _ => throw new ArgumentException($"Benchmark section {section} does not exist")
+    };
+    
+    BenchmarkRunner.Run(benchmark, BenchmarkConfig.Default, args);
+}
+else
+{
+    BenchmarkSwitcher
+        .FromTypes(
+        [
+            typeof(QueryExcelBenchmark),
+            typeof(CreateExcelBenchmark),
+            typeof(TemplateExcelBenchmark)
+        ])
+        .Run(args, BenchmarkConfig.Default);
 }

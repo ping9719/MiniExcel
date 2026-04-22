@@ -1,238 +1,366 @@
-﻿namespace MiniExcelLibs
+﻿using System.Data;
+using MiniExcelLib;
+using MiniExcelLib.Core;
+using MiniExcelLib.Csv;
+using MiniExcelLib.OpenXml.Api;
+using MiniExcelLib.OpenXml.Models;
+using MiniExcelLib.OpenXml.Picture;
+using MiniExcelLibs.OpenXml;
+using Zomp.SyncMethodGenerator;
+
+using NewMiniExcel = MiniExcelLib.Core.MiniExcel;
+using OpenXmlExporter = MiniExcelLib.OpenXml.Api.OpenXmlExporter;
+using OpenXmlImporter = MiniExcelLib.Core.OpenXmlImporter;
+using OpenXmlTemplater = MiniExcelLib.Core.OpenXmlTemplater;
+
+// ReSharper disable once CheckNamespace
+namespace MiniExcelLibs;
+
+public static partial class MiniExcel
 {
-    using MiniExcelLibs.OpenXml;
-    using MiniExcelLibs.Utils;
-    using MiniExcelLibs.Zip;
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Dynamic;
-    using System.IO;
-    using System.Linq;
-    using System.Threading.Tasks;
+    private static readonly OpenXmlExporter ExcelExporter = NewMiniExcel.Exporters.GetOpenXmlExporter();
+    private static readonly OpenXmlImporter ExcelImporter = NewMiniExcel.Importers.GetOpenXmlImporter();
+    private static readonly OpenXmlTemplater ExcelTemplater = NewMiniExcel.Templaters.GetOpenXmlTemplater();
+    
+    private static readonly CsvExporter CsvExporter = NewMiniExcel.Exporters.GetCsvExporter();
+    private static readonly CsvImporter CsvImporter = NewMiniExcel.Importers.GetCsvImporter();
 
-    public static partial class MiniExcel
+    
+    [CreateSyncVersion]
+    public static async Task AddPictureAsync(string path, CancellationToken cancellationToken = default, params MiniExcelPicture[] images) 
+        => await ExcelTemplater.AddPictureAsync(path, cancellationToken, images).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task AddPictureAsync(Stream excelStream, CancellationToken cancellationToken = default, params MiniExcelPicture[] images) 
+        => await ExcelTemplater.AddPictureAsync(excelStream, cancellationToken, images).ConfigureAwait(false);
+    
+    public static MiniExcelDataReader GetReader(string path, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null)
     {
-        public static MiniExcelDataReader GetReader(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
+        var type = path.GetExcelType(excelType);
+        return type switch
         {
-            var stream = FileHelper.OpenSharedRead(path);
-            return new MiniExcelDataReader(stream, useHeaderRow, sheetName, excelType, startCell, configuration);
-        }
-
-        public static MiniExcelDataReader GetReader(this Stream stream, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            return new MiniExcelDataReader(stream, useHeaderRow, sheetName, excelType, startCell, configuration);
-        }
-
-        public static void Insert(string path, object value, string sheetName = "Sheet1", ExcelType excelType = ExcelType.UNKNOWN, IConfiguration configuration = null)
-        {
-            if (Path.GetExtension(path).ToLowerInvariant() != ".csv")
-                throw new NotSupportedException("MiniExcel SaveAs only support csv insert now");
-
-            using (var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read, 4096, FileOptions.SequentialScan))
-                Insert(stream, value, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), configuration);
-        }
-
-        public static void Insert(this Stream stream, object value, string sheetName = "Sheet1", ExcelType excelType = ExcelType.XLSX, IConfiguration configuration = null)
-        {
-            // reuse code
-            object v = null;
-            {
-                if (!(value is IEnumerable) && !(value is IDataReader) && !(value is IDictionary<string, object>) && !(value is IDictionary))
-                    v = Enumerable.Range(0, 1).Select(s => value);
-                else
-                    v = value;
-            }
-            ExcelWriterFactory.GetProvider(stream, v, sheetName, excelType, configuration, false).Insert();
-        }
-
-        public static void SaveAs(string path, object value, bool printHeader = true, string sheetName = "Sheet1", ExcelType excelType = ExcelType.UNKNOWN, IConfiguration configuration = null, bool overwriteFile = false)
-        {
-            if (Path.GetExtension(path).ToLowerInvariant() == ".xlsm")
-                throw new NotSupportedException("MiniExcel SaveAs not support xlsm");
-
-            using (var stream = overwriteFile ? File.Create(path) : new FileStream(path, FileMode.CreateNew))
-                SaveAs(stream, value, printHeader, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), configuration);
-        }
-
-        public static void SaveAs(this Stream stream, object value, bool printHeader = true, string sheetName = "Sheet1", ExcelType excelType = ExcelType.XLSX, IConfiguration configuration = null)
-        {
-            ExcelWriterFactory.GetProvider(stream, value, sheetName, excelType, configuration, printHeader).SaveAs();
-        }
-
-        public static IEnumerable<T> Query<T>(string path, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null) where T : class, new()
-        {
-            using (var stream = FileHelper.OpenSharedRead(path))
-                foreach (var item in Query<T>(stream, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), startCell, configuration))
-                    yield return item; //Foreach yield return twice reason : https://stackoverflow.com/questions/66791982/ienumerable-extract-code-lazy-loading-show-stream-was-not-readable
-        }
-
-        public static IEnumerable<T> Query<T>(this Stream stream, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null) where T : class, new()
-        {
-            using (var excelReader = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration))
-                foreach (var item in excelReader.Query<T>(sheetName, startCell))
-                {
-                    yield return item;
-                }
-        }
-        public static IEnumerable<dynamic> Query(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            using (var stream = FileHelper.OpenSharedRead(path))
-                foreach (var item in Query(stream, useHeaderRow, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), startCell, configuration))
-                    yield return item;
-        }
-        public static IEnumerable<dynamic> Query(this Stream stream, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            using (var excelReader = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration))
-                foreach (var item in excelReader.Query(useHeaderRow, sheetName, startCell))
-                    yield return item.Aggregate(new ExpandoObject() as IDictionary<string, object>,
-                            (dict, p) => { dict.Add(p); return dict; });
-        }
-
-        #region range
-
-        public static IEnumerable<dynamic> QueryRange(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "a1", string endCell = "", IConfiguration configuration = null)
-        {
-            using (var stream = FileHelper.OpenSharedRead(path))
-                foreach (var item in QueryRange(stream, useHeaderRow, sheetName, ExcelTypeHelper.GetExcelType(path, excelType), startCell == "" ? "a1" : startCell, endCell, configuration))
-                    yield return item;
-        }
-
-        public static IEnumerable<dynamic> QueryRange(this Stream stream, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "a1", string endCell = "", IConfiguration configuration = null)
-        {
-            using (var excelReader = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration))
-                foreach (var item in excelReader.QueryRange(useHeaderRow, sheetName, startCell == "" ? "a1" : startCell, endCell))
-                    yield return item.Aggregate(new ExpandoObject() as IDictionary<string, object>,
-                            (dict, p) => { dict.Add(p); return dict; });
-        }
-
-        #endregion range
-
-        public static void SaveAsByTemplate(string path, string templatePath, object value, IConfiguration configuration = null)
-        {
-            using (var stream = File.Create(path))
-                SaveAsByTemplate(stream, templatePath, value, configuration);
-        }
-
-        public static void SaveAsByTemplate(string path, byte[] templateBytes, object value, IConfiguration configuration = null)
-        {
-            using (var stream = File.Create(path))
-                SaveAsByTemplate(stream, templateBytes, value, configuration);
-        }
-
-        public static void SaveAsByTemplate(this Stream stream, string templatePath, object value, IConfiguration configuration = null)
-        {
-            ExcelTemplateFactory.GetProvider(stream, configuration).SaveAsByTemplate(templatePath, value);
-        }
-
-        public static void SaveAsByTemplate(this Stream stream, byte[] templateBytes, object value, IConfiguration configuration = null)
-        {
-            ExcelTemplateFactory.GetProvider(stream, configuration).SaveAsByTemplate(templateBytes, value);
-        }
-
-        /// <summary>
-        /// QueryAsDataTable is not recommended, because it'll load all data into memory.
-        /// </summary>
-        [Obsolete("QueryAsDataTable is not recommended, because it'll load all data into memory.")]
-        public static DataTable QueryAsDataTable(string path, bool useHeaderRow = true, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            using (var stream = FileHelper.OpenSharedRead(path))
-            {
-                return QueryAsDataTable(stream, useHeaderRow, sheetName, excelType: ExcelTypeHelper.GetExcelType(path, excelType), startCell, configuration);
-            }
-        }
-
-        public static DataTable QueryAsDataTable(this Stream stream, bool useHeaderRow = true, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            if (sheetName == null && excelType != ExcelType.CSV) /*Issue #279*/
-                sheetName = stream.GetSheetNames().First();
-
-            var dt = new DataTable(sheetName);
-            var first = true;
-            var rows = ExcelReaderFactory.GetProvider(stream, ExcelTypeHelper.GetExcelType(stream, excelType), configuration).Query(useHeaderRow, sheetName, startCell);
-
-            var keys = new List<string>();
-            foreach (IDictionary<string, object> row in rows)
-            {
-                if (first)
-                {
-                    foreach (var key in row.Keys)
-                    {
-                        if (!string.IsNullOrEmpty(key)) // avoid #298 : Column '' does not belong to table
-                        {
-                            var column = new DataColumn(key, typeof(object)) { Caption = key };
-                            dt.Columns.Add(column);
-                            keys.Add(key);
-                        }
-                    }
-
-                    dt.BeginLoadData();
-                    first = false;
-                }
-
-                var newRow = dt.NewRow();
-                foreach (var key in keys)
-                {
-                    newRow[key] = row[key]; //TODO: optimize not using string key
-                }
-
-                dt.Rows.Add(newRow);
-            }
-
-            dt.EndLoadData();
-            return dt;
-        }
-
-        public static List<string> GetSheetNames(string path)
-        {
-            using (var stream = FileHelper.OpenSharedRead(path))
-                return GetSheetNames(stream);
-        }
-
-        public static List<string> GetSheetNames(this Stream stream)
-        {
-            var archive = new ExcelOpenXmlZip(stream);
-            return new ExcelOpenXmlSheetReader(stream, null).GetWorkbookRels(archive.entries).Select(s => s.Name).ToList();
-        }
-
-        public static ICollection<string> GetColumns(string path, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            using (var stream = FileHelper.OpenSharedRead(path))
-                return GetColumns(stream, useHeaderRow, sheetName, excelType, startCell, configuration);
-        }
-
-        public static ICollection<string> GetColumns(this Stream stream, bool useHeaderRow = false, string sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration configuration = null)
-        {
-            return (Query(stream, useHeaderRow, sheetName, excelType, startCell, configuration).FirstOrDefault() as IDictionary<string, object>)?.Keys;
-        }
-
-        public static void ConvertCsvToXlsx(string csv, string xlsx)
-        {
-            using (var csvStream = FileHelper.OpenSharedRead(csv))
-            using (var xlsxStream = new FileStream(xlsx, FileMode.CreateNew))
-            {
-                ConvertCsvToXlsx(csvStream, xlsxStream);
-            }
-        }
-
-        public static void ConvertCsvToXlsx(Stream csv, Stream xlsx)
-        {
-            var value = Query(csv, useHeaderRow: false, excelType: ExcelType.CSV);
-            SaveAs(xlsx, value, printHeader: false, excelType: ExcelType.XLSX);
-        }
-
-        public static void ConvertXlsxToCsv(string xlsx, string csv)
-        {
-            using (var xlsxStream = FileHelper.OpenSharedRead(xlsx))
-            using (var csvStream = new FileStream(csv, FileMode.CreateNew))
-                ConvertXlsxToCsv(xlsxStream, csvStream);
-        }
-
-        public static void ConvertXlsxToCsv(Stream xlsx, Stream csv)
-        {
-            var value = Query(xlsx, useHeaderRow: false, excelType: ExcelType.XLSX);
-            SaveAs(csv, value, printHeader: false, excelType: ExcelType.CSV);
-        }
+            ExcelType.XLSX => ExcelImporter.GetDataReader(path, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration),
+            ExcelType.CSV => CsvImporter.GetDataReader(path, useHeaderRow),
+            _ => throw new NotSupportedException($"Type {type} is not a valid Excel type")
+        };
     }
+    
+    public static MiniExcelDataReader GetReader(this Stream stream, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.GetDataReader(stream, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration),
+            ExcelType.CSV => CsvImporter.GetDataReader(stream, useHeaderRow),
+            _ => throw new NotSupportedException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<int> InsertAsync(string path, object value, string sheetName = "Sheet1", ExcelType excelType = ExcelType.UNKNOWN,
+        IConfiguration? configuration = null, bool printHeader = true, bool overwriteSheet = false,
+        IProgress<int>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelExporter.InsertSheetAsync(path, value, sheetName, printHeader, overwriteSheet, configuration as OpenXmlConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvExporter.AppendAsync(path, value, printHeader, configuration as Csv.CsvConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<int> InsertAsync(this Stream stream, object value, string sheetName = "Sheet1", ExcelType excelType = ExcelType.XLSX,
+        IConfiguration? configuration = null, bool printHeader = true, bool overwriteSheet = false,
+        IProgress<int>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelExporter.InsertSheetAsync(stream, value, sheetName, printHeader, overwriteSheet, configuration as OpenXmlConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvExporter.AppendAsync(stream, value, configuration as Csv.CsvConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<int[]> SaveAsAsync(string path, object value, bool printHeader = true,
+        string sheetName = "Sheet1", ExcelType excelType = ExcelType.UNKNOWN, IConfiguration? configuration = null,
+        bool overwriteFile = false, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelExporter.ExportAsync(path, value, printHeader, sheetName, overwriteFile, configuration as OpenXmlConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvExporter.ExportAsync(path, value, printHeader, overwriteFile, configuration as Csv.CsvConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<int[]> SaveAsAsync(this Stream stream, object value, bool printHeader = true,
+        string sheetName = "Sheet1", ExcelType excelType = ExcelType.XLSX, IConfiguration? configuration = null,
+        IProgress<int>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelExporter.ExportAsync(stream, value, printHeader, sheetName, configuration as OpenXmlConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvExporter.ExportAsync(stream, value, printHeader, configuration as Csv.CsvConfiguration, progress, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<T> QueryAsync<T>(string path, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, bool hasHeader = true, CancellationToken cancellationToken = default) where T : class, new()
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryAsync<T>(path, sheetName, startCell, hasHeader, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => CsvImporter.QueryAsync<T>(path, hasHeader, configuration as Csv.CsvConfiguration, cancellationToken),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<T> QueryAsync<T>(this Stream stream, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, bool hasHeader = true, CancellationToken cancellationToken = default) where T : class, new()
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryAsync<T>(stream, sheetName, startCell, hasHeader, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => CsvImporter.QueryAsync<T>(stream, hasHeader, configuration as Csv.CsvConfiguration, cancellationToken),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+   
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<dynamic> QueryAsync(string path, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryAsync(path, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => CsvImporter.QueryAsync(path, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+    
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<dynamic> QueryAsync(this Stream stream, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryAsync(stream, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => CsvImporter.QueryAsync(stream, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    #region QueryRange
+
+    /// <summary>
+    /// Extract the given range。 Only uppercase letters are effective。
+    /// e.g.
+    ///     MiniExcel.QueryRange(path, startCell: "A2", endCell: "C3")
+    ///     A2 represents the second row of column A, C3 represents the third row of column C
+    ///     If you don't want to restrict rows, just don't include numbers
+    /// </summary>
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<dynamic> QueryRangeAsync(string path, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", string endCell = "", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryRangeAsync(path, useHeaderRow, sheetName, startCell, endCell, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => throw new NotSupportedException("QueryRange is not supported for csv"),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<dynamic> QueryRangeAsync(this Stream stream, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", string endCell = "", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryRangeAsync(stream, useHeaderRow, sheetName, startCell, endCell, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => CsvImporter.QueryAsync(stream, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<dynamic> QueryRangeAsync(string path, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, int startRowIndex = 1, int startColumnIndex = 1, int? endRowIndex = null, int? endColumnIndex = null, IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryRangeAsync(path, useHeaderRow, sheetName, startRowIndex, startColumnIndex, endRowIndex, endColumnIndex, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => throw new NotSupportedException("QueryRange is not supported for csv"),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+    
+    [CreateSyncVersion]
+    public static IAsyncEnumerable<dynamic> QueryRangeAsync(this Stream stream, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, int startRowIndex = 1, int startColumnIndex = 1, int? endRowIndex = null, int? endColumnIndex = null, IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => ExcelImporter.QueryRangeAsync(stream, useHeaderRow, sheetName, startRowIndex, startColumnIndex, endRowIndex, endColumnIndex, configuration as OpenXmlConfiguration, cancellationToken),
+            ExcelType.CSV => throw new NotSupportedException("QueryRange is not supported for csv"),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    #endregion QueryRange
+
+    [CreateSyncVersion]
+    public static async Task SaveAsByTemplateAsync(string path, string templatePath, object value, IConfiguration? configuration = null, CancellationToken cancellationToken = default) 
+        => await ExcelTemplater.FillTemplateAsync(path, templatePath, value, true, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task SaveAsByTemplateAsync(string path, byte[] templateBytes, object value, IConfiguration? configuration = null)
+        => await ExcelTemplater.FillTemplateAsync(path, templateBytes, value, true, configuration as OpenXmlConfiguration).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task SaveAsByTemplateAsync(this Stream stream, string templatePath, object value, IConfiguration? configuration = null)
+        => await ExcelTemplater.FillTemplateAsync(stream, templatePath, value, configuration as OpenXmlConfiguration).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task SaveAsByTemplateAsync(this Stream stream, byte[] templateBytes, object value, IConfiguration? configuration = null)
+        => await ExcelTemplater.FillTemplateAsync(stream, templateBytes, value, configuration as OpenXmlConfiguration).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task SaveAsByTemplateAsync(string path, Stream templateStream, object value, IConfiguration? configuration = null)
+        => await ExcelTemplater.FillTemplateAsync(path, templateStream, value, true, configuration as OpenXmlConfiguration).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task SaveAsByTemplateAsync(this Stream stream, Stream templateStream, object value, IConfiguration? configuration = null)
+        => await ExcelTemplater.FillTemplateAsync(stream, templateStream, value, configuration as OpenXmlConfiguration).ConfigureAwait(false);
+
+    #region MergeCells
+
+    [CreateSyncVersion]
+    public static async Task MergeSameCellsAsync(string mergedFilePath, string path, ExcelType excelType = ExcelType.XLSX, IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        if (excelType != ExcelType.XLSX) 
+            throw new NotSupportedException("MergeSameCells is only supported for Xlsx files");
+
+        await ExcelTemplater.MergeSameCellsAsync(mergedFilePath, path, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false);
+    }
+
+    [CreateSyncVersion]
+    public static async Task MergeSameCellsAsync(this Stream stream, string path, ExcelType excelType = ExcelType.XLSX, IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        if (excelType != ExcelType.XLSX) 
+            throw new NotSupportedException("MergeSameCells is only supported for Xlsx files");
+
+        await ExcelTemplater.MergeSameCellsAsync(stream, path, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false);
+    }
+
+    [CreateSyncVersion]
+    public static async Task MergeSameCellsAsync(this Stream stream, byte[] filePath, ExcelType excelType = ExcelType.XLSX, IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        if (excelType != ExcelType.XLSX) 
+            throw new NotSupportedException("MergeSameCells is only supported for Xlsx files");
+
+        await ExcelTemplater.MergeSameCellsAsync(stream, filePath, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false);
+    }
+
+    #endregion
+
+    [CreateSyncVersion]
+    [Obsolete("The use of QueryAsDataTable is not recommended, because it'll load all data into memory.")]
+    public static async Task<DataTable> QueryAsDataTableAsync(string path, bool useHeaderRow = true, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelImporter.QueryAsDataTableAsync(path, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvImporter.QueryAsDataTableAsync(path, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    [Obsolete("The use of QueryAsDataTable is not recommended, because it'll load all data into memory.")]
+    public static async Task<DataTable> QueryAsDataTableAsync(this Stream stream, bool useHeaderRow = true, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelImporter.QueryAsDataTableAsync(stream, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvImporter.QueryAsDataTableAsync(stream, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Excel type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<List<string>> GetSheetNamesAsync(string path, OpenXmlConfiguration? config = null, CancellationToken cancellationToken = default)
+        => await ExcelImporter.GetSheetNamesAsync(path, config, cancellationToken).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task<List<string>> GetSheetNamesAsync(this Stream stream, OpenXmlConfiguration? config = null, CancellationToken cancellationToken = default)
+        => await ExcelImporter.GetSheetNamesAsync(stream, config, cancellationToken).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task<List<SheetInfo>> GetSheetInformationsAsync(string path, OpenXmlConfiguration? config = null, CancellationToken cancellationToken = default)
+        => await ExcelImporter.GetSheetInformationsAsync(path, config, cancellationToken).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task<List<SheetInfo>> GetSheetInformationsAsync(this Stream stream, OpenXmlConfiguration? config = null, CancellationToken cancellationToken = default)
+        => await ExcelImporter.GetSheetInformationsAsync(stream, config, cancellationToken).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task<ICollection<string>> GetColumnsAsync(string path, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = path.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelImporter.GetColumnNamesAsync(path, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvImporter.GetColumnNamesAsync(path, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Excel type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<ICollection<string>> GetColumnsAsync(this Stream stream, bool useHeaderRow = false, string? sheetName = null, ExcelType excelType = ExcelType.UNKNOWN, string startCell = "A1", IConfiguration? configuration = null, CancellationToken cancellationToken = default)
+    {
+        var type = stream.GetExcelType(excelType);
+        return type switch
+        {
+            ExcelType.XLSX => await ExcelImporter.GetColumnNamesAsync(stream, useHeaderRow, sheetName, startCell, configuration as OpenXmlConfiguration, cancellationToken).ConfigureAwait(false),
+            ExcelType.CSV => await CsvImporter.GetColumnNamesAsync(stream, useHeaderRow, configuration as Csv.CsvConfiguration, cancellationToken).ConfigureAwait(false),
+            _ => throw new InvalidDataException($"Excel type {type} is not a valid Excel type")
+        };
+    }
+
+    [CreateSyncVersion]
+    public static async Task<IList<ExcelRange>> GetSheetDimensionsAsync(string path, CancellationToken cancellationToken = default) 
+        => await ExcelImporter.GetSheetDimensionsAsync(path, cancellationToken).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task<IList<ExcelRange>> GetSheetDimensionsAsync(this Stream stream, CancellationToken cancellationToken = default) 
+        => await ExcelImporter.GetSheetDimensionsAsync(stream, cancellationToken).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task ConvertCsvToXlsxAsync(string csv, string xlsx, CancellationToken cancellationToken = default)
+        => await MiniExcelConverter.ConvertCsvToXlsxAsync(csv, xlsx, cancellationToken: cancellationToken).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task ConvertCsvToXlsxAsync(Stream csv, Stream xlsx, CancellationToken cancellationToken = default)
+        => await MiniExcelConverter.ConvertCsvToXlsxAsync(csv, xlsx, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+    [CreateSyncVersion]
+    public static async Task ConvertXlsxToCsvAsync(string xlsx, string csv, CancellationToken cancellationToken = default)
+        => await MiniExcelConverter.ConvertXlsxToCsvAsync(xlsx, csv, cancellationToken: cancellationToken).ConfigureAwait(false);
+    
+    [CreateSyncVersion]
+    public static async Task ConvertXlsxToCsvAsync(Stream xlsx, Stream csv, CancellationToken cancellationToken = default)
+        => await MiniExcelConverter.ConvertXlsxToCsvAsync(xlsx, csv, cancellationToken: cancellationToken).ConfigureAwait(false);
 }
